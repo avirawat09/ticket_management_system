@@ -44,7 +44,15 @@ class Issue(models.Model):
     def __str__(self):
         return self.title
 
+class Project(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='creator', default=None)
 
+
+class ProjectIssueMap(models.Model):
+    project =  models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project', default=None)
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='issue', default=None)
 
 
 
