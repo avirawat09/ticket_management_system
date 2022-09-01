@@ -43,6 +43,9 @@ class Issue(models.Model):
     assignee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignee', default=None)
     def __str__(self):
         return self.title
+    def get_key_value(self, name):
+        return getattr(self, name)
+
 
 class Project(models.Model):
     title = models.CharField(max_length=200)
@@ -55,4 +58,17 @@ class ProjectIssueMap(models.Model):
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='issue', default=None)
 
 
+class EventLog(models.Model):
+    issue_id =  models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='issue_id', default=None)
+    updated_field = models.CharField(max_length=20)
+    previous_value = models.TextField()
+    new_value = models.TextField()
+    timestamp = models.DateTimeField(default=timezone.now)  
+
+class Comment(models.Model):
+    issue_id = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comment_issue_id', default=None)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='author', default=None)
+    text = models.TextField()
+    created_on = models.DateTimeField(default=timezone.now)
+    updated_on = models.DateTimeField(default=timezone.now)
 

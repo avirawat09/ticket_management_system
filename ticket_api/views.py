@@ -1,10 +1,12 @@
+from django.utils import timezone
 from django.shortcuts import render
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
 from rest_framework import status
- 
-from ticket_api.models import Issue, Project, ProjectIssueMap
-from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer
+
+from ticket_api.view_utils import insert_to_event_log
+from ticket_api.models import Issue, Project, ProjectIssueMap, Comment
+from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer, CommentSerializer
 from rest_framework.decorators import api_view, permission_classes
 
 from rest_framework.views import APIView
@@ -45,7 +47,8 @@ def issue_single_update(request,issue_id):
     if request.method =='PUT':
         new_issue = JSONParser().parse(request)
         if 'reporter' in new_issue.keys():
-            return JsonResponse({"details" : "issue reporter cannot be changed"}, status=status.HTTP_400_BAD_REQUEST)    
+            return JsonResponse({"details" : "issue reporter cannot be changed"}, status=status.HTTP_400_BAD_REQUEST)                
+        insert_to_event_log(issue_id, issues, new_issue)
         issue_serializer = IssueSerializer(issues, data=new_issue)
         if issue_serializer.is_valid():
             issue_serializer.save()
@@ -174,5 +177,40 @@ def project_fetch_by_parameter(request,project_parameter, parameter_value):
 
 
 
+# Comments
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def comment_issue(request, issue_id):
+    if request.method == 'GET':
+        comments = Comment.objects.filter(issue_id = issue_id)
+        comment_serializer = CommentSerializer(comments, many=True)
+        return JsonResponse(comment_serializer.data, safe=False)
+    elif request.method =='POST':
+        new_comment = JSONParser().parse(request)
+        new_comment["issue_id"] = issue_id
+        comment_serializer = CommentSerializer(data=new_comment)
+        if comment_serializer.is_valid():
+            comment_serializer.save()
+            return JsonResponse(comment_serializer.data, status=status.HTTP_201_CREATED)    
+        
+        return JsonResponse(comment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def comment_issue_udpate(request,comment_id):
+    comments = Comment.objects.get(pk=comment_id)
+    if request.method =='PUT':
+        new_comment = JSONParser().parse(request)
+        new_comment['updated_on'] = timezone.now()
+        comment_serializer = CommentSerializer(comments, data=new_comment)
+        if comment_serializer.is_valid():
+            comment_serializer.save()
+            print(comment_serializer)
+            return JsonResponse(comment_serializer.data, status=status.HTTP_201_CREATED)    
+        
+        return JsonResponse(comment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if request.method =='DELETE':
+        comments.delete()
+        return JsonResponse({"details":"Sucessfully deleted"}, status=status.HTTP_204_NO_CONTENT)

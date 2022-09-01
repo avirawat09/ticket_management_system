@@ -1,5 +1,5 @@
 from rest_framework import serializers 
-from ticket_api.models import Issue, Project, ProjectIssueMap
+from ticket_api.models import Issue, Project, ProjectIssueMap, EventLog, Comment
 
 class IssueSerializer(serializers.ModelSerializer): 
     class Meta:
@@ -30,5 +30,29 @@ class ProjectIssueMapSerializer(serializers.ModelSerializer):
         fields = ('id',
                   'project',
                   'issue'
+                )                 
+
+
+class EventLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventLog
+        fields = ('id',
+                  'issue_id',
+                  'updated_field',
+                  'previous_value',
+                  'new_value',
+                  'timestamp'
+                )                 
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ('id',
+                  'issue_id',
+                  'author',
+                  'text',
+                  'created_on',
+                  'updated_on'
                 )                 
 
