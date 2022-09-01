@@ -11,7 +11,7 @@ def user_list(request):
     return render(request, 'user/user_list.html', {})
 
 # ISSUE VIEW
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'POST'])
 def issue_list(request):
     if request.method == 'GET':
         issues = Issue.objects.all()
@@ -26,14 +26,13 @@ def issue_list(request):
         
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def issue_detail_single(request,issue_id):
+@api_view(['PUT', 'DELETE'])
+def issue_single_update(request,issue_id):
     issues = Issue.objects.get(pk=issue_id)
-    if request.method == 'GET':
-        issue_serializer = IssueSerializer(issues)
-        return JsonResponse(issue_serializer.data, safe=False)
-    elif request.method =='PUT':
+    if request.method =='PUT':
         new_issue = JSONParser().parse(request)
+        if 'reporter' in new_issue.keys():
+            return JsonResponse({"details" : "issue reporter cannot be changed"}, status=status.HTTP_400_BAD_REQUEST)    
         issue_serializer = IssueSerializer(issues, data=new_issue)
         if issue_serializer.is_valid():
             issue_serializer.save()
@@ -41,7 +40,31 @@ def issue_detail_single(request,issue_id):
         
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    if request.method =='DELETE':
+        issues.delete()
+        return JsonResponse({"details":"Sucessfully deleted"}, status=status.HTTP_204_NO_CONTENT)
 
+
+
+@api_view(['GET'])
+def issue_fetch_by_parameter(request,issue_parameter, parameter_value):
+    if issue_parameter == 'id':
+        issues = Issue.objects.get(pk=int(parameter_value))
+        issue_serializer = IssueSerializer(issues)
+        return JsonResponse(issue_serializer.data, safe=False)
+    elif issue_parameter == 'title':
+        issues = Issue.objects.filter(title=parameter_value).values()[0]
+        issue_serializer = IssueSerializer(issues)
+        return JsonResponse(issue_serializer.data, safe=False)
+
+    elif issue_parameter == 'description':
+        issues = Issue.objects.filter(description=parameter_value).values()[0]
+        issue_serializer = IssueSerializer(issues)
+        return JsonResponse(issue_serializer.data, safe=False)
+
+    else:
+        return JsonResponse({'detail': 'Wrong parameter'}, safe=False)
+    
 
 
 # PROJECT VIEW
@@ -78,8 +101,8 @@ def project_list(request):
         
         return JsonResponse(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def project_detail_single(request,project_id):
+@api_view(['PUT', 'DELETE'])
+def project_single_update(request,project_id):
     projects = Project.objects.get(pk=project_id)
     if request.method =='PUT':
         new_project = JSONParser().parse(request)
@@ -89,7 +112,10 @@ def project_detail_single(request,project_id):
             return JsonResponse(project_serializer.data, status=status.HTTP_201_CREATED)    
         
         return JsonResponse(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    if request.method =='DELETE':
+        projects.delete()
+        return JsonResponse({"details":"Sucessfully deleted"}, status=status.HTTP_204_NO_CONTENT)
+    
 
 @api_view(['GET', 'POST', 'DELETE'])
 def project_issue_add(request, project_id):
@@ -114,6 +140,19 @@ def project_issue_add(request, project_id):
 
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+def project_fetch_by_parameter(request,project_parameter, parameter_value):
+    if project_parameter == 'id':
+        projects = Project.objects.get(pk=int(parameter_value))
+        project_serializer = ProjectSerializer(projects)
+        return JsonResponse(project_serializer.data, safe=False)
+    elif project_parameter == 'name':
+        projects = Project.objects.filter(title=parameter_value).values()[0]
+        project_serializer = ProjectSerializer(projects)
+        return JsonResponse(project_serializer.data, safe=False)
+
+    else:
+        return JsonResponse({'detail': 'Wrong parameter'}, safe=False)
 
 
 
