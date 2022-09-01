@@ -5,13 +5,25 @@ from rest_framework import status
  
 from ticket_api.models import Issue, Project, ProjectIssueMap
 from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+class HelloView(APIView):
+    permission_classes = (IsAuthenticated, )  
+    def get(self, request):
+        content = {'message': 'Hello, Authentication feature working fine'}
+        return Response(content)
+
 # Create your views here.
 def user_list(request):
     return render(request, 'user/user_list.html', {})
 
 # ISSUE VIEW
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def issue_list(request):
     if request.method == 'GET':
         issues = Issue.objects.all()
@@ -27,6 +39,7 @@ def issue_list(request):
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def issue_single_update(request,issue_id):
     issues = Issue.objects.get(pk=issue_id)
     if request.method =='PUT':
@@ -47,6 +60,7 @@ def issue_single_update(request,issue_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def issue_fetch_by_parameter(request,issue_parameter, parameter_value):
     if issue_parameter == 'id':
         issues = Issue.objects.get(pk=int(parameter_value))
@@ -69,6 +83,7 @@ def issue_fetch_by_parameter(request,issue_parameter, parameter_value):
 
 # PROJECT VIEW
 @api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def project_list(request):
     print('inside project list')
     if request.method == 'GET':
@@ -102,6 +117,7 @@ def project_list(request):
         return JsonResponse(project_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def project_single_update(request,project_id):
     projects = Project.objects.get(pk=project_id)
     if request.method =='PUT':
@@ -118,6 +134,7 @@ def project_single_update(request,project_id):
     
 
 @api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def project_issue_add(request, project_id):
     if request.method =='POST': 
         new_issue = JSONParser().parse(request)
@@ -141,6 +158,7 @@ def project_issue_add(request, project_id):
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def project_fetch_by_parameter(request,project_parameter, parameter_value):
     if project_parameter == 'id':
         projects = Project.objects.get(pk=int(parameter_value))

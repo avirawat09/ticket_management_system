@@ -11,7 +11,7 @@ urlpatterns = [
     path("project/<int:project_id>", views.project_single_update, name = 'project_single_update'), 
     path("project/issue/<int:project_id>", views.project_issue_add, name = 'project_list'), 
     path("project/<project_parameter>/<parameter_value>", views.project_fetch_by_parameter, name = 'project_list'),
-    
+    path('hello/', views.HelloView.as_view(), name ='authentication_check'),
     
 
 ]
