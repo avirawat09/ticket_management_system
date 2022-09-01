@@ -1,4 +1,6 @@
 from ticket_api.serializers import EventLogSerializer
+import json
+from django.core import serializers
 def insert_to_event_log(issue_id, issues, new_issue):
     print('issues are below')
     
@@ -14,3 +16,9 @@ def insert_to_event_log(issue_id, issues, new_issue):
         print(event_serializer)
         if event_serializer.is_valid():
             event_serializer.save()
+
+
+
+
+def json_serialized(obj):
+    return json.loads(serializers.serialize('json', list(obj)))             

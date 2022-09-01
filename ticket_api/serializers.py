@@ -1,5 +1,5 @@
 from rest_framework import serializers 
-from ticket_api.models import Issue, Project, ProjectIssueMap, EventLog, Comment
+from ticket_api.models import CustomUser, Issue, Project, ProjectIssueMap, EventLog, Comment
 
 class IssueSerializer(serializers.ModelSerializer): 
     class Meta:
@@ -23,6 +23,7 @@ class ProjectSerializer(serializers.ModelSerializer):
                   'description',
                   'creator'
                 )                 
+        extra_kwargs = {'title': {'required': False}}
 
 class ProjectIssueMapSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,4 +56,26 @@ class CommentSerializer(serializers.ModelSerializer):
                   'created_on',
                   'updated_on'
                 )                 
+
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ('id',
+#                   'name',
+#                   'email',
+#                   'password',
+#                   'created_date',
+#                   'role'
+#                 )                 
+#         extra_kwargs = {'name': {'required': False}}
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ('id',
+                  'name',
+                  'email',
+                )                 
+        extra_kwargs = {'name': {'required': False}}
 

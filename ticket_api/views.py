@@ -1,17 +1,31 @@
+from unittest import result
 from django.utils import timezone
 from django.shortcuts import render
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
 from rest_framework import status
-
-from ticket_api.view_utils import insert_to_event_log
-from ticket_api.models import Issue, Project, ProjectIssueMap, Comment
+from django.core import serializers
+import json
+from ticket_api.view_utils import insert_to_event_log, json_serialized
+from ticket_api.models import CustomUser, Issue, Project, ProjectIssueMap, Comment
 from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer, CommentSerializer
 from rest_framework.decorators import api_view, permission_classes
+from django.contrib.auth.decorators import permission_required
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from django.urls import reverse_lazy
+from django.views.generic.edit import CreateView
+from .forms import CustomUserCreationForm
+
+class SignUpView(CreateView):
+    form_class = CustomUserCreationForm
+    success_url = reverse_lazy("login")
+    template_name = "registration/signup.html"
+
 
 class HelloView(APIView):
     permission_classes = (IsAuthenticated, )  
@@ -26,11 +40,22 @@ def user_list(request):
 # ISSUE VIEW
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def issue_list(request):
+    print(dir(request.user))
+    print(request.user.get_all_permissions())
     if request.method == 'GET':
         issues = Issue.objects.all()
+        users = CustomUser.objects.all()
+        f_user = users.filter(pk=3).values_list('username')[0][0]
         issue_serializer = IssueSerializer(issues, many=True)
-        return JsonResponse(issue_serializer.data, safe=False)
+        issue_serializer_data = issue_serializer.data
+        for issue_data in issue_serializer_data:
+
+            issue_data['reporter'] = users.filter(pk=issue_data['reporter']).values_list('username')[0][0]
+            issue_data['assignee'] = users.filter(pk=issue_data['assignee']).values_list('username')[0][0]
+            
+        return JsonResponse(issue_serializer_data, safe=False)
     elif request.method =='POST':
         new_issue = JSONParser().parse(request)
         issue_serializer = IssueSerializer(data=new_issue)
@@ -42,6 +67,7 @@ def issue_list(request):
 
 @api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def issue_single_update(request,issue_id):
     issues = Issue.objects.get(pk=issue_id)
     if request.method =='PUT':
@@ -64,7 +90,9 @@ def issue_single_update(request,issue_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def issue_fetch_by_parameter(request,issue_parameter, parameter_value):
+    print('debuggg')
     if issue_parameter == 'id':
         issues = Issue.objects.get(pk=int(parameter_value))
         issue_serializer = IssueSerializer(issues)
@@ -87,25 +115,23 @@ def issue_fetch_by_parameter(request,issue_parameter, parameter_value):
 # PROJECT VIEW
 @api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def project_list(request):
-    print('inside project list')
     if request.method == 'GET':
         projects = Project.objects.all()
-        for each_project in projects:
-            project_id = each_project.id
-            print('project id ', project_id)
-            filtered_project_issue_map = ProjectIssueMap.objects.filter( project=project_id )
-            print(filtered_project_issue_map)
-            filtered_project_issue_map_serializer = ProjectIssueMapSerializer(data=  filtered_project_issue_map, many=True)
-            if filtered_project_issue_map_serializer.is_valid():
-                each_project.issue_list = filtered_project_issue_map_serializer.data
-            else:
-                print('not valid')    
-        project_serializer = ProjectSerializer(projects, many=True)
-
-
-        print(project_serializer.data)
-        return JsonResponse(project_serializer.data, safe=False)
+        projects_serialized = json_serialized(projects)
+        for each_project in projects_serialized:
+            issue_list = []
+            project_id = each_project['pk']
+            project_issue_list = list(ProjectIssueMap.objects.filter( project=project_id ).values_list('issue'))
+            if len(project_issue_list)>0:
+                project_issue_list  = [item[0] for item in project_issue_list]
+                project_issue_detail_list = Issue.objects.filter(pk__in=project_issue_list)
+                project_issue_detail_list = json_serialized(project_issue_detail_list)
+                issue_list = [{'id': item['pk'], **item['fields']} for item in project_issue_detail_list]
+            each_project['issue_list'] = issue_list    
+        projects_serialized = [{'id': item['pk'], **item['fields'], 'issue_list': item['issue_list']} for item in projects_serialized]
+        return JsonResponse(projects_serialized, safe=False)
     elif request.method =='POST': 
         new_project = JSONParser().parse(request)
         print(new_project)
@@ -121,6 +147,7 @@ def project_list(request):
 
 @api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def project_single_update(request,project_id):
     projects = Project.objects.get(pk=project_id)
     if request.method =='PUT':
@@ -138,6 +165,7 @@ def project_single_update(request,project_id):
 
 @api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def project_issue_add(request, project_id):
     if request.method =='POST': 
         new_issue = JSONParser().parse(request)
@@ -162,24 +190,33 @@ def project_issue_add(request, project_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def project_fetch_by_parameter(request,project_parameter, parameter_value):
     if project_parameter == 'id':
-        projects = Project.objects.get(pk=int(parameter_value))
-        project_serializer = ProjectSerializer(projects)
-        return JsonResponse(project_serializer.data, safe=False)
+        projects = Project.objects.filter(pk=int(parameter_value))
     elif project_parameter == 'name':
-        projects = Project.objects.filter(title=parameter_value).values()[0]
-        project_serializer = ProjectSerializer(projects)
-        return JsonResponse(project_serializer.data, safe=False)
-
+        projects = Project.objects.filter(title=parameter_value)        
     else:
         return JsonResponse({'detail': 'Wrong parameter'}, safe=False)
-
+    projects_serialized = json_serialized(projects)
+    for each_project in projects_serialized:
+        issue_list = []
+        project_id = each_project['pk']
+        project_issue_list = list(ProjectIssueMap.objects.filter( project=project_id ).values_list('issue'))
+        if len(project_issue_list)>0:
+            project_issue_list  = [item[0] for item in project_issue_list]
+            project_issue_detail_list = Issue.objects.filter(pk__in=project_issue_list)
+            project_issue_detail_list = json_serialized(project_issue_detail_list)
+            issue_list = [{'id': item['pk'], **item['fields']} for item in project_issue_detail_list]
+        each_project['issue_list'] = issue_list    
+    projects_serialized = [{'id': item['pk'], **item['fields'], 'issue_list': item['issue_list']} for item in projects_serialized]
+    return JsonResponse(projects_serialized, safe=False)
 
 
 # Comments
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def comment_issue(request, issue_id):
     if request.method == 'GET':
         comments = Comment.objects.filter(issue_id = issue_id)
@@ -199,6 +236,7 @@ def comment_issue(request, issue_id):
 
 @api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
 def comment_issue_udpate(request,comment_id):
     comments = Comment.objects.get(pk=comment_id)
     if request.method =='PUT':
@@ -214,3 +252,6 @@ def comment_issue_udpate(request,comment_id):
     if request.method =='DELETE':
         comments.delete()
         return JsonResponse({"details":"Sucessfully deleted"}, status=status.HTTP_204_NO_CONTENT)
+
+
+

@@ -1,13 +1,12 @@
 from django.urls import path, include
 from . import views
-
 urlpatterns = [
     path('', views.user_list, name='user_list'),
     path('hello/', views.HelloView.as_view(), name ='authentication_check'),
     
     path("issues", views.issue_list, name = 'issue_list'), 
     path("issues/<int:issue_id>", views.issue_single_update),     
-    path("issues/<issue_parameter>/<issue_value>", views.issue_fetch_by_parameter), 
+    path("issues/<issue_parameter>/<parameter_value>", views.issue_fetch_by_parameter), 
     
     path("project", views.project_list, name = 'project_list'),
     path("project/<int:project_id>", views.project_single_update, name = 'project_single_update'), 
@@ -17,4 +16,6 @@ urlpatterns = [
     path("comment/issue/<issue_id>", views.comment_issue, name = 'comment_issue'),
     path("comment/<comment_id>", views.comment_issue_udpate, name = 'comment_update'),
     
+    path("signup/", views.SignUpView.as_view(), name="signup"),
+
 ]

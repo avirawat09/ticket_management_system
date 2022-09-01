@@ -1,6 +1,17 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import AbstractUser
+
+
+class CustomUser(AbstractUser):
+    username = models.CharField(max_length=200, unique=True)
+    email = models.TextField()
+    # add additional fields in here
+
+    def __str__(self):
+        return self.username
+
 
 # BUG, TASK, STORY, EPIC 
 class IssueType(models.Model):
@@ -21,15 +32,16 @@ class Role(models.Model):
         return self.name
 
 
-class User(models.Model):
-    name = models.CharField(max_length=200)
-    email = models.TextField()
-    created_date = models.DateTimeField(default=timezone.now)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, default=None)
-    def publish(self):
-        self.save()
-    def __str__(self):
-        return self.name
+# class User(models.Model):
+#     name = models.CharField(max_length=200)
+#     email = models.TextField()
+#     created_date = models.DateTimeField(default=timezone.now)
+#     role = models.ForeignKey(Role, on_delete=models.CASCADE, default=None)
+#     password = models.CharField(max_length=50, default='')
+#     def publish(self):
+#         self.save()
+#     def __str__(self):
+#         return self.name
 
 
 
@@ -39,8 +51,8 @@ class Issue(models.Model):
     description = models.TextField()
     status = models.ForeignKey(IssueStatus, on_delete=models.CASCADE, default=None)
     estimated_time = models.IntegerField()
-    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reporter', default=None)
-    assignee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignee', default=None)
+    reporter = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reporter', default=None)
+    assignee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='assignee', default=None)
     def __str__(self):
         return self.title
     def get_key_value(self, name):
@@ -50,7 +62,7 @@ class Issue(models.Model):
 class Project(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='creator', default=None)
+    creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='creator', default=None)
 
 
 class ProjectIssueMap(models.Model):
@@ -67,8 +79,9 @@ class EventLog(models.Model):
 
 class Comment(models.Model):
     issue_id = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comment_issue_id', default=None)
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='author', default=None)
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='author', default=None)
     text = models.TextField()
     created_on = models.DateTimeField(default=timezone.now)
     updated_on = models.DateTimeField(default=timezone.now)
+
 
