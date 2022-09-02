@@ -1,4 +1,5 @@
 from unittest import result
+from xml.dom.domreg import well_known_implementations
 from django.utils import timezone
 from django.shortcuts import render
 from django.http.response import JsonResponse
@@ -7,8 +8,8 @@ from rest_framework import status
 from django.core import serializers
 import json
 from ticket_api.view_utils import insert_to_event_log, json_serialized
-from ticket_api.models import CustomUser, Issue, Project, ProjectIssueMap, Comment
-from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer, CommentSerializer
+from ticket_api.models import CustomUser, Issue, Project, ProjectIssueMap, Comment, Watcher
+from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer, CommentSerializer, WatcherSerializer
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.decorators import permission_required
 
@@ -39,7 +40,7 @@ def user_list(request):
 
 # ISSUE VIEW
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 #@permission_required("", login_url='/signup/')
 def issue_list(request):
     print(dir(request.user))
@@ -61,6 +62,15 @@ def issue_list(request):
         issue_serializer = IssueSerializer(data=new_issue)
         if issue_serializer.is_valid():
             issue_serializer.save()
+            issue_id = issue_serializer.data['id']
+            for key in ['reporter', 'assignee']:
+                new_entry = {
+                    "issue_id": issue_id,
+                    "user_id": new_issue[key]
+                    }
+                watcher_serializer = WatcherSerializer(data = new_entry)
+                if watcher_serializer.is_valid():
+                    watcher_serializer.save()
             return JsonResponse(issue_serializer.data, status=status.HTTP_201_CREATED)    
         
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -254,4 +264,30 @@ def comment_issue_udpate(request,comment_id):
         return JsonResponse({"details":"Sucessfully deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 
+# WATCHER
 
+@api_view(['GET'])
+#@permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
+def watcher_list(request, issue_id):
+    if request.method == 'GET':
+        watchers = Watcher.objects.filter(issue_id = issue_id).values_list('user_id')
+        watchers_list = [watcher[0] for watcher in watchers]
+        usernames = CustomUser.objects.filter(pk__in=watchers_list).values_list('username')
+        usernames_list = [username[0] for username in usernames]
+        return JsonResponse(usernames_list, safe=False)
+
+@api_view(['POST'])
+#@permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
+def watcher_add(request, issue_id, watcher_id):
+    if request.method == 'POST':
+        new_entry = {
+            "issue_id": issue_id,
+            "user_id": watcher_id
+        }
+        watcher_serializer = WatcherSerializer(data = new_entry)
+        if watcher_serializer.is_valid():
+            watcher_serializer.save()
+            return JsonResponse(watcher_serializer.data, safe=False)
+        return JsonResponse(watcher_serializer.errors, safe=False)

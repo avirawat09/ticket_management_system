@@ -84,4 +84,7 @@ class Comment(models.Model):
     created_on = models.DateTimeField(default=timezone.now)
     updated_on = models.DateTimeField(default=timezone.now)
 
-
+class Watcher(models.Model):
+    issue_id = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='watcher_issue_id', default=None)
+    user_id = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='watcher_user_id', default=None)
+    

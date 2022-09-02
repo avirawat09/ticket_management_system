@@ -18,4 +18,7 @@ urlpatterns = [
     
     path("signup/", views.SignUpView.as_view(), name="signup"),
 
+    path("watcher/<issue_id>", views.watcher_list, name = 'watcher_list'),
+    path("watcher/<issue_id>/<watcher_id>", views.watcher_add, name = 'watcher_add'),
+    
 ]

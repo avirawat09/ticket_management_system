@@ -21,4 +21,5 @@ def insert_to_event_log(issue_id, issues, new_issue):
 
 
 def json_serialized(obj):
-    return json.loads(serializers.serialize('json', list(obj)))             
+    return json.loads(serializers.serialize('json', list(obj)))
+    
