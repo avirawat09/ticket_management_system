@@ -48,7 +48,6 @@ def issue_list(request):
     if request.method == 'GET':
         issues = Issue.objects.all()
         users = CustomUser.objects.all()
-        f_user = users.filter(pk=3).values_list('username')[0][0]
         issue_serializer = IssueSerializer(issues, many=True)
         issue_serializer_data = issue_serializer.data
         for issue_data in issue_serializer_data:
@@ -294,3 +293,28 @@ def watcher_add(request, issue_id, watcher_id):
             watcher_serializer.save()
             return JsonResponse(watcher_serializer.data, safe=False)
         return JsonResponse(watcher_serializer.errors, safe=False)
+
+
+# REPORT
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+#@permission_required("", login_url='/signup/')
+def report_open_issues(request):
+    if request.method == 'GET':
+        open_issues = Issue.objects.order_by().filter(status = 1)
+        unique_users = open_issues.values_list('assignee').distinct()
+        unique_users = [user[0] for user in unique_users]
+        print(unique_users)
+        result = []
+        for each_user in unique_users:
+            each_user_issues = {}
+            each_open_issue_list = open_issues.filter(assignee = each_user).values()
+            each_user_details = CustomUser.objects.filter(pk=each_user).values_list('username', 'email')
+            each_user_issues['username'] = each_user_details[0][0] 
+            each_user_issues['email'] = each_user_details[0][1]
+            each_user_issues['issues_list'] =  list(each_open_issue_list)            
+            result.append(each_user_issues)
+        return JsonResponse(result, safe=False)
+
+
+        

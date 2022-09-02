@@ -20,5 +20,7 @@ urlpatterns = [
 
     path("watcher/<issue_id>", views.watcher_list, name = 'watcher_list'),
     path("watcher/<issue_id>/<watcher_id>", views.watcher_add, name = 'watcher_add'),
+
+    path("report", views.report_open_issues, name = 'report_open_issues'),
     
 ]
