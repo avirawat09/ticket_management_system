@@ -7,7 +7,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework import status
 from django.core import serializers
 import json
-from ticket_api.view_utils import insert_to_event_log, json_serialized
+from ticket_api.view_utils import insert_to_event_log, json_serialized, send_notification_to_watchers
 from ticket_api.models import CustomUser, Issue, Project, ProjectIssueMap, Comment, Watcher
 from ticket_api.serializers import IssueSerializer, ProjectSerializer, ProjectIssueMapSerializer, CommentSerializer, WatcherSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -40,7 +40,7 @@ def user_list(request):
 
 # ISSUE VIEW
 @api_view(['GET', 'POST'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 #@permission_required("", login_url='/signup/')
 def issue_list(request):
     print(dir(request.user))
@@ -84,10 +84,13 @@ def issue_single_update(request,issue_id):
         new_issue = JSONParser().parse(request)
         if 'reporter' in new_issue.keys():
             return JsonResponse({"details" : "issue reporter cannot be changed"}, status=status.HTTP_400_BAD_REQUEST)                
-        insert_to_event_log(issue_id, issues, new_issue)
         issue_serializer = IssueSerializer(issues, data=new_issue)
         if issue_serializer.is_valid():
             issue_serializer.save()
+            insert_to_event_log(issue_id, issues, new_issue)
+            if len(set(new_issue.keys()).intersection({'title', 'assignee','description'}))>0:
+                send_notification_to_watchers(issue_serializer.data)
+        
             return JsonResponse(issue_serializer.data, status=status.HTTP_201_CREATED)    
         
         return JsonResponse(issue_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -267,7 +270,7 @@ def comment_issue_udpate(request,comment_id):
 # WATCHER
 
 @api_view(['GET'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 #@permission_required("", login_url='/signup/')
 def watcher_list(request, issue_id):
     if request.method == 'GET':
@@ -278,7 +281,7 @@ def watcher_list(request, issue_id):
         return JsonResponse(usernames_list, safe=False)
 
 @api_view(['POST'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 #@permission_required("", login_url='/signup/')
 def watcher_add(request, issue_id, watcher_id):
     if request.method == 'POST':
